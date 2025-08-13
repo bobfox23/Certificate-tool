@@ -1,0 +1,9 @@
+{
+  "name": "digital-beat-certificate-tool-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend dependencies for the serverless API function.",
+  "dependencies": {
+    "@google/genai": "^1.5.0"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Copy of Digital Beat certificate tool  - 07/08/2025",
+  "description": "Extracts key information (Report Number, Game Name, File Names, and MD5 Hashes) from certificate PDF files using Gemini API and displays it in a table to be copied and pasted into certificate area. ",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
