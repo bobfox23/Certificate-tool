@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { UploadIcon } from './icons/UploadIcon.jsx';
-import { MAX_FILE_SIZE_MB } from '../constants.js';
+import { UploadIcon } from './icons/UploadIcon.tsx';
+import { MAX_FILE_SIZE_MB } from '../constants.ts';
 
 
 const FileUploader = ({ onFilesSelected, isProcessing }) => {

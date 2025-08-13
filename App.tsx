@@ -3,12 +3,12 @@ import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
 import saveAs from 'file-saver';
 
-import { FileUploader } from './components/FileUploader.jsx';
-import { ReportTable } from './components/ReportTable.jsx';
-import { ExcelDataProvider } from './components/ExcelDataProvider.jsx';
-import { extractInfoFromText, extractInfoFromImage } from './services/geminiService.js';
-import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from './constants.js';
-import { PlayIcon } from './components/icons/PlayIcon.jsx';
+import { FileUploader } from './components/FileUploader.tsx';
+import { ReportTable } from './components/ReportTable.tsx';
+import { ExcelDataProvider } from './components/ExcelDataProvider.tsx';
+import { extractInfoFromText, extractInfoFromImage } from './services/geminiService.ts';
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from './constants.ts';
+import { PlayIcon } from './components/icons/PlayIcon.tsx';
 
 // Set up pdf.js worker
 const PDF_WORKER_SRC = `https://esm.sh/pdfjs-dist@4.5.136/build/pdf.worker.min.js`;

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { DatabaseIcon } from './icons/DatabaseIcon.jsx';
+import { DatabaseIcon } from './icons/DatabaseIcon.tsx';
 
 const normalizeGameName = (name) => {
   if (!name) return '';
