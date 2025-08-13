@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
@@ -6,9 +7,8 @@ import saveAs from 'file-saver';
 import { FileUploader } from './components/FileUploader.jsx';
 import { ReportTable } from './components/ReportTable.jsx';
 import { ExcelDataProvider } from './components/ExcelDataProvider.jsx';
-import { ProcessedFileData, ExtractedGeminiInfo, GameProviderMap } from './types.ts';
-import { extractInfoFromText, extractInfoFromImage } from './services/geminiService.ts';
-import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from './constants.ts';
+import { extractInfoFromText, extractInfoFromImage } from './services/geminiService.js';
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from './constants.js';
 import { PlayIcon } from './components/icons/PlayIcon.jsx';
 
 // Set up pdf.js worker
@@ -18,15 +18,19 @@ if (typeof Worker !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_SRC;
 }
 
-const triggerDownload = (blob: Blob, fileName: string) => {
+const triggerDownload = (blob, fileName) => {
   saveAs(blob, fileName);
 };
 
-const convertFileToBase64AndGetMime = (file: File): Promise<{ base64: string, mimeType: string }> => {
+const convertFileToBase64AndGetMime = (file) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      const result = reader.result as string;
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error("File could not be read as a data URL."));
+        return;
+      }
       const parts = result.split(';');
       if (parts.length < 2 || !parts[0].startsWith('data:')) {
         reject(new Error("Invalid Data URL format"));
@@ -41,7 +45,7 @@ const convertFileToBase64AndGetMime = (file: File): Promise<{ base64: string, mi
   });
 };
 
-const normalizeGameName = (name: string | null): string => {
+const normalizeGameName = (name) => {
   if (!name) return '';
   return name
     .trim()
@@ -53,28 +57,28 @@ const normalizeGameName = (name: string | null): string => {
     .trim();
 };
 
-const App: React.FC = () => {
-  const [processedFiles, setProcessedFiles] = useState<ProcessedFileData[]>([]);
-  const [originalFilesMap, setOriginalFilesMap] = useState<Map<string, File>>(new Map());
-  const [isBatchProcessing, setIsBatchProcessing] = useState<boolean>(false);
-  const [isZipping, setIsZipping] = useState<boolean>(false);
-  const [gameProviderMap, setGameProviderMap] = useState<GameProviderMap>(new Map());
-  const [providerDataStatus, setProviderDataStatus] = useState<string>('');
+const App = () => {
+  const [processedFiles, setProcessedFiles] = useState([]);
+  const [originalFilesMap, setOriginalFilesMap] = useState(new Map());
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+  const [isZipping, setIsZipping] = useState(false);
+  const [gameProviderMap, setGameProviderMap] = useState(new Map());
+  const [providerDataStatus, setProviderDataStatus] = useState('');
 
-  const extractTextFromPdf = async (file: File): Promise<string> => {
+  const extractTextFromPdf = async (file) => {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      fullText += textContent.items.map(item => (item as any).str).join(' ') + '\n';
+      fullText += textContent.items.map(item => ('str' in item ? item.str : '')).join(' ') + '\n';
     }
     return fullText;
   };
 
-  const handleFilesSelected = useCallback(async (files: FileList) => {
-    const newInitialFilesData: ProcessedFileData[] = [];
+  const handleFilesSelected = useCallback(async (files) => {
+    const newInitialFilesData = [];
     const newOriginalFilesMap = new Map(originalFilesMap);
 
     for (let i = 0; i < files.length; i++) {
@@ -153,7 +157,7 @@ const App: React.FC = () => {
             const file = originalFilesMap.get(currentFileToProcess.id);
             if (!file) throw new Error("Original file not found for processing.");
 
-            let extractedData: ExtractedGeminiInfo;
+            let extractedData;
             const isPdf = file.type === 'application/pdf';
             const isImage = file.type.startsWith('image/png') || file.type.startsWith('image/jpeg');
 
@@ -164,7 +168,7 @@ const App: React.FC = () => {
                 }
                 extractedData = await extractInfoFromText(textContent, apiKey);
             } else if (isImage) {
-                const { base64, mimeType } = await convertFileToBase64AndGetMime(file);
+                const { base64, mimeType } = await convertFileToBase64AndGetMime(file) as { base64: string, mimeType: string };
                 if (!base64) {
                     throw new Error("Could not convert image to base64.");
                 }
@@ -181,7 +185,7 @@ const App: React.FC = () => {
               extractedInstances: extractedData.gameInstances,
               status: 'completed',
             } : f));
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error processing file ${currentFileToProcess.pdfFileName}:`, error);
             setProcessedFiles(prev => prev.map(f => f.id === currentFileToProcess.id ? {
               ...f,
@@ -203,7 +207,7 @@ const App: React.FC = () => {
     setOriginalFilesMap(new Map());
   }, [isBatchProcessing, isZipping]);
 
-  const handleProviderDataParsed = useCallback((map: GameProviderMap, count: number) => {
+  const handleProviderDataParsed = useCallback((map, count) => {
     setGameProviderMap(map);
     if (count > 0) {
       setProviderDataStatus(`Loaded ${count} game provider mapping${count === 1 ? '' : 's'}.`);
@@ -228,7 +232,7 @@ const App: React.FC = () => {
         const originalFile = originalFilesMap.get(processedFile.id);
         if (!originalFile) continue;
 
-        const processedFolders = new Set<string>();
+        const processedFolders = new Set();
 
         if (processedFile.extractedInstances && processedFile.extractedInstances.length > 0) {
             for (const instance of processedFile.extractedInstances) {

@@ -1,13 +1,10 @@
-
-
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { ExtractedGeminiInfo, GameInstanceData, FileDetail } from '../types.ts';
-import { GEMINI_MODEL_NAME, GENAI_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_PROMPT_FOR_CONTENTS } from '../constants.ts';
+import { GoogleGenAI } from "@google/genai";
+import { GEMINI_MODEL_NAME, GENAI_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_PROMPT_FOR_CONTENTS } from '../constants.js';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
 
-function validateAndStructureData(parsedData: any, rawResponseText: string): ExtractedGeminiInfo {
+function validateAndStructureData(parsedData, rawResponseText) {
     // This validation logic is copied from the original api/extract.ts
     if (typeof parsedData.reportNumber === 'undefined' ||
         typeof parsedData.certificationDate === 'undefined' ||
@@ -18,7 +15,7 @@ function validateAndStructureData(parsedData: any, rawResponseText: string): Ext
     }
     
     if (parsedData.gameInstances) {
-      for (const instance of parsedData.gameInstances as Array<Partial<GameInstanceData>>) {
+      for (const instance of parsedData.gameInstances) {
         if (typeof instance.gameName === 'undefined' ||
             typeof instance.gameCode === 'undefined' ||
             !Array.isArray(instance.files)) {
@@ -26,7 +23,7 @@ function validateAndStructureData(parsedData: any, rawResponseText: string): Ext
           throw new Error('Parsed JSON for a game instance is invalid (missing gameName, gameCode, or files array).');
         }
         if (instance.files) {
-          for (const file of instance.files as Array<Partial<FileDetail>>) {
+          for (const file of instance.files) {
             if (typeof file.name !== 'string' ) {
                console.error("Parsed JSON file entry error: missing name. File:", file, "Raw:", rawResponseText.substring(0,500));
                throw new Error('Parsed JSON for a file entry is invalid (missing name).');
@@ -36,15 +33,15 @@ function validateAndStructureData(parsedData: any, rawResponseText: string): Ext
       }
     }
 
-    const validatedData: ExtractedGeminiInfo = {
+    const validatedData = {
       reportNumber: parsedData.reportNumber ?? null,
       certificationDate: parsedData.certificationDate ?? null,
       supplierRegistrationNumber: parsedData.supplierRegistrationNumber ?? null,
-      gameInstances: (parsedData.gameInstances || []).map((instance: Partial<GameInstanceData>) => ({
+      gameInstances: (parsedData.gameInstances || []).map((instance) => ({
           gameName: instance.gameName ?? null,
           gameCode: instance.gameCode ?? null,
-          files: (instance.files || []).map((f: Partial<FileDetail>) => ({
-              name: f.name!,
+          files: (instance.files || []).map((f) => ({
+              name: f.name,
               md5: f.md5 === undefined ? null : f.md5, 
               sha1: f.sha1 === undefined ? null : f.sha1 
           }))
@@ -54,14 +51,14 @@ function validateAndStructureData(parsedData: any, rawResponseText: string): Ext
 }
 
 
-export async function extractInfoFromText(ocrText: string, apiKey: string): Promise<ExtractedGeminiInfo> {
+export async function extractInfoFromText(ocrText, apiKey) {
   if (!apiKey) throw new Error("API Key is not provided.");
   const ai = new GoogleGenAI({ apiKey });
-  let lastError: any = null;
+  let lastError = null;
   
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const response: GenerateContentResponse = await ai.models.generateContent({
+      const response = await ai.models.generateContent({
         model: GEMINI_MODEL_NAME,
         contents: ocrText,
         config: {
@@ -81,11 +78,11 @@ export async function extractInfoFromText(ocrText: string, apiKey: string): Prom
       try {
         const parsedData = JSON.parse(jsonStr);
         return validateAndStructureData(parsedData, response.text);
-      } catch (e: any) {
+      } catch (e) {
         throw new Error(`Failed to parse/validate JSON from AI (text). Raw: ${response.text.substring(0,1000)}. Err: ${e.message}`);
       }
 
-    } catch (error: any) {
+    } catch (error) {
       lastError = error;
       const errorMessage = String(error.message || '');
       if (errorMessage.includes("API key not valid")) {
@@ -101,17 +98,17 @@ export async function extractInfoFromText(ocrText: string, apiKey: string): Prom
   throw lastError || new Error(`Failed to extract info from text after ${MAX_RETRIES} attempts.`);
 }
 
-export async function extractInfoFromImage(imageBase64: string, mimeType: string, apiKey: string): Promise<ExtractedGeminiInfo> {
+export async function extractInfoFromImage(imageBase64, mimeType, apiKey) {
   if (!apiKey) throw new Error("API Key is not provided.");
   const ai = new GoogleGenAI({ apiKey });
-  let lastError: any = null;
+  let lastError = null;
   
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const imagePart = { inlineData: { mimeType, data: imageBase64 } };
       const textPart = { text: IMAGE_EXTRACTION_PROMPT_FOR_CONTENTS };
 
-      const response: GenerateContentResponse = await ai.models.generateContent({
+      const response = await ai.models.generateContent({
         model: GEMINI_MODEL_NAME,
         contents: { parts: [imagePart, textPart] },
         config: {
@@ -131,11 +128,11 @@ export async function extractInfoFromImage(imageBase64: string, mimeType: string
       try {
         const parsedData = JSON.parse(jsonStr);
         return validateAndStructureData(parsedData, response.text);
-      } catch (e: any) {
+      } catch (e) {
         throw new Error(`Failed to parse/validate JSON from AI (image). Raw: ${response.text.substring(0,1000)}. Err: ${e.message}`);
       }
 
-    } catch (error: any) {
+    } catch (error) {
       lastError = error;
       const errorMessage = String(error.message || '');
        if (errorMessage.includes("API key not valid")) {

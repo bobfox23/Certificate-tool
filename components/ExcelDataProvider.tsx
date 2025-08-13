@@ -1,13 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { GameProviderMap, ProviderInfo } from '../types.ts';
-import { DatabaseIcon } from './icons/DatabaseIcon.jsx'; // Assuming a new icon or reuse existing
+import { DatabaseIcon } from './icons/DatabaseIcon.jsx';
 
-interface ExcelDataProviderProps {
-  onDataParsed: (map: GameProviderMap, count: number) => void;
-  currentStatus: string;
-}
-
-const normalizeGameName = (name: string | null): string => {
+const normalizeGameName = (name) => {
   if (!name) return '';
   return name
     .trim()
@@ -19,12 +13,12 @@ const normalizeGameName = (name: string | null): string => {
     .trim();
 };
 
-export const ExcelDataProvider: React.FC<ExcelDataProviderProps> = ({ onDataParsed, currentStatus }) => {
+export const ExcelDataProvider = ({ onDataParsed, currentStatus }) => {
   const [excelData, setExcelData] = useState('');
 
   const handleParseData = useCallback(() => {
     const lines = excelData.split('\n');
-    const newProviderMap: GameProviderMap = new Map();
+    const newProviderMap = new Map();
     let validEntries = 0;
 
     // Skip header row if present
@@ -42,7 +36,7 @@ export const ExcelDataProvider: React.FC<ExcelDataProviderProps> = ({ onDataPars
         if (gameName && providerName) {
           const normalizedKey = normalizeGameName(gameName);
           if (normalizedKey) {
-            const info: ProviderInfo = {
+            const info = {
                 provider: providerName,
                 portalLiveDate: portalLiveDate,
                 imsGameCode: imsGameCode,

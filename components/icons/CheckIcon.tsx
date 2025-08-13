@@ -1,10 +1,6 @@
 import React from 'react';
 
-interface IconProps {
-  className?: string;
-}
-
-export const CheckIcon: React.FC<IconProps> = ({ className }) => (
+const CheckIcon = ({ className }) => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 
     fill="none" 
@@ -16,3 +12,5 @@ export const CheckIcon: React.FC<IconProps> = ({ className }) => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
   </svg>
 );
+
+export { CheckIcon };

@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import { ProcessedFileData, GameInstanceData, FileDetail, GameProviderMap } from '../types.ts';
 import { ClipboardIcon } from './icons/ClipboardIcon.jsx';
 import { CheckIcon } from './icons/CheckIcon.jsx';
 import { LoadingSpinner } from './LoadingSpinner.jsx';
@@ -8,17 +7,7 @@ import { TrashIcon } from './icons/TrashIcon.jsx';
 import { DownloadIcon } from './icons/DownloadIcon.jsx'; 
 import { DocumentDuplicateIcon } from './icons/DocumentDuplicateIcon.jsx'; // For .COM process button
 
-interface ReportTableProps {
-  data: ProcessedFileData[];
-  gameProviderMap: GameProviderMap;
-  onClearAllData: () => void;
-  onExportZip: () => void;
-  isZipping: boolean;
-  isBatchProcessing: boolean; // Added to disable controls during batch processing
-  canExport: boolean;
-}
-
-const normalizeGameName = (name: string | null): string => {
+const normalizeGameName = (name) => {
   if (!name) return '';
   return name
     .trim()
@@ -30,7 +19,7 @@ const normalizeGameName = (name: string | null): string => {
     .trim();
 };
 
-const cleanGameNameForDisplay = (name: string | null): string => {
+const cleanGameNameForDisplay = (name) => {
     if (!name) return 'N/A';
     const cleaned = name
         .trim()
@@ -43,18 +32,18 @@ const cleanGameNameForDisplay = (name: string | null): string => {
 };
 
 // A pure helper function, can be defined outside the component.
-const getDisplayHash = (file: FileDetail): string => {
+const getDisplayHash = (file) => {
   if (file.md5) return file.md5;
   if (file.sha1) return file.sha1;
   return 'N/A';
 };
 
-export const ReportTable: React.FC<ReportTableProps> = ({ data, gameProviderMap, onClearAllData, onExportZip, isZipping, isBatchProcessing, canExport }) => {
+export const ReportTable = ({ data, gameProviderMap, onClearAllData, onExportZip, isZipping, isBatchProcessing, canExport }) => {
   const [copied, setCopied] = useState(false);
   const [comCopied, setComCopied] = useState(false);
 
   // This helper depends on props (gameProviderMap), so it's defined inside the component.
-  const getGameProvider = (gameName: string | null): string => {
+  const getGameProvider = (gameName) => {
     if (!gameName || gameName.trim() === '' || gameProviderMap.size === 0) return 'N/A';
     const providerInfo = gameProviderMap.get(normalizeGameName(gameName));
     return providerInfo?.provider || 'N/A';
@@ -63,7 +52,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({ data, gameProviderMap,
   const copyToClipboard = useCallback(() => {
     const headers = "GameName\tGameCodes\tProgressive\tCertificateRef\tDate\tSupplierRegistrationnumber\tDeactivated\tFileList\tHashList";
     
-    const formatListForClipboard = (items: (string | null)[]) => {
+    const formatListForClipboard = (items) => {
       if (!items || items.length === 0) return 'N/A';
       const content = items.filter(Boolean).join(', ');
       if (!content) return 'N/A';
@@ -73,7 +62,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({ data, gameProviderMap,
 
     // Build a map to store one authoritative IMS code for each game.
     // This ensures consistency when a game appears in multiple certificates.
-    const authoritativeImsCodeMap = new Map<string, string>();
+    const authoritativeImsCodeMap = new Map();
 
     // 1. First pass: Prioritize Monday.com data for the authoritative code.
     for (const [gameNameKey, providerInfo] of gameProviderMap.entries()) {
@@ -94,7 +83,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({ data, gameProviderMap,
         });
     });
 
-    const tableRows: string[] = [];
+    const tableRows = [];
     data.forEach(fileEntry => {
       if (fileEntry.status !== 'completed') return;
 
@@ -151,7 +140,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({ data, gameProviderMap,
     const headers = "Game Name\tIMS Game Code\tCertificate Number\tPortal Live Date";
     
     // Build authoritative IMS code map (same logic as other copy function)
-    const authoritativeImsCodeMap = new Map<string, string>();
+    const authoritativeImsCodeMap = new Map();
     for (const [gameNameKey, providerInfo] of gameProviderMap.entries()) {
         if (providerInfo.imsGameCode) {
             authoritativeImsCodeMap.set(gameNameKey, providerInfo.imsGameCode);
@@ -167,15 +156,7 @@ export const ReportTable: React.FC<ReportTableProps> = ({ data, gameProviderMap,
         });
     });
 
-    // Create intermediate structure for sorting
-    interface ComDataRow {
-        gameName: string;
-        gameCode: string;
-        certificateRef: string;
-        date: string;
-        provider: string; // For sorting
-    }
-    const comDataRows: ComDataRow[] = [];
+    const comDataRows = [];
 
     data.forEach(fileEntry => {
         if (fileEntry.status !== 'completed') return;

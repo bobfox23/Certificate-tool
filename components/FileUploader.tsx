@@ -1,34 +1,29 @@
 import React, { useState, useCallback } from 'react';
 import { UploadIcon } from './icons/UploadIcon.jsx';
-import { MAX_FILE_SIZE_MB } from '../constants.ts';
+import { MAX_FILE_SIZE_MB } from '../constants.js';
 
 
-interface FileUploaderProps {
-  onFilesSelected: (files: FileList) => void;
-  isProcessing: boolean;
-}
-
-export const FileUploader: React.FC<FileUploaderProps> = ({ onFilesSelected, isProcessing }) => {
+const FileUploader = ({ onFilesSelected, isProcessing }) => {
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragEnter = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
   }, []);
 
-  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragLeave = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -38,7 +33,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFilesSelected, isP
     }
   }, [onFilesSelected]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       onFilesSelected(e.target.files);
        // Reset file input to allow uploading the same file again
@@ -82,3 +77,5 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFilesSelected, isP
     </div>
   );
 };
+
+export { FileUploader };
