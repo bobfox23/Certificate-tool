@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
@@ -12,7 +13,7 @@ import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from './constants.ts';
 import { PlayIcon } from './components/icons/PlayIcon.tsx';
 
 // Set up pdf.js worker
-const PDF_WORKER_SRC = `https://esm.sh/pdfjs-dist@4.5.136/build/pdf.worker.min.js`;
+const PDF_WORKER_SRC = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.js`;
 
 if (typeof Worker !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_SRC;
