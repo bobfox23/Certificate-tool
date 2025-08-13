@@ -1,4 +1,3 @@
-
 export const GEMINI_MODEL_NAME = "gemini-2.5-flash";
 
 export const GENAI_SYSTEM_INSTRUCTION = `You are an expert data extraction tool. From the provided OCR text of a technical compliance report or certificate, you must extract the following specific pieces of information:

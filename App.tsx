@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
@@ -22,7 +21,7 @@ const triggerDownload = (blob, fileName) => {
   saveAs(blob, fileName);
 };
 
-const convertFileToBase64AndGetMime = (file) => {
+const convertFileToBase64AndGetMime = (file): Promise<{ base64: string; mimeType: string; }> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -168,7 +167,7 @@ const App = () => {
                 }
                 extractedData = await extractInfoFromText(textContent, apiKey);
             } else if (isImage) {
-                const { base64, mimeType } = await convertFileToBase64AndGetMime(file) as { base64: string, mimeType: string };
+                const { base64, mimeType } = await convertFileToBase64AndGetMime(file);
                 if (!base64) {
                     throw new Error("Could not convert image to base64.");
                 }
