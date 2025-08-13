@@ -6,6 +6,7 @@ import saveAs from 'file-saver';
 import { FileUploader } from './components/FileUploader.tsx';
 import { ReportTable } from './components/ReportTable.tsx';
 import { ExcelDataProvider } from './components/ExcelDataProvider.tsx';
+import { ApiKeyManager } from './components/ApiKeyManager.tsx';
 import { extractInfoFromText, extractInfoFromImage } from './services/geminiService.ts';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from './constants.ts';
 import { PlayIcon } from './components/icons/PlayIcon.tsx';
@@ -57,6 +58,7 @@ const normalizeGameName = (name) => {
 };
 
 const App = () => {
+  const [apiKey, setApiKey] = useState('');
   const [processedFiles, setProcessedFiles] = useState([]);
   const [originalFilesMap, setOriginalFilesMap] = useState(new Map());
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
@@ -134,10 +136,9 @@ const App = () => {
   const handleStartProcessing = useCallback(async () => {
     if (isBatchProcessing || isZipping) return;
 
-    const apiKey = process.env.API_KEY;
     if (!apiKey) {
-        alert("Error: The Gemini API_KEY is not configured in the environment. Please set it up to proceed.");
-        setProcessedFiles(prev => prev.map(f => f.status === 'queued' ? { ...f, status: 'error', errorMessage: 'API Key not configured.' } : f));
+        alert("Error: The Gemini API Key is not set. Please set it before processing files.");
+        setProcessedFiles(prev => prev.map(f => f.status === 'queued' ? { ...f, status: 'error', errorMessage: 'API Key not set.' } : f));
         return;
     }
 
@@ -194,7 +195,7 @@ const App = () => {
         }
     }
     setIsBatchProcessing(false);
-  }, [processedFiles, originalFilesMap, isBatchProcessing, isZipping]);
+  }, [processedFiles, originalFilesMap, isBatchProcessing, isZipping, apiKey]);
 
 
   const handleClearAllData = useCallback(() => {
@@ -305,7 +306,10 @@ const App = () => {
       </header>
 
       <main className="w-full max-w-5xl space-y-8">
-        <>
+        {!apiKey ? (
+          <ApiKeyManager onKeySaved={setApiKey} isProcessing={isBatchProcessing || isZipping} />
+        ) : (
+          <>
             <ExcelDataProvider onDataParsed={handleProviderDataParsed} currentStatus={providerDataStatus} />
             <FileUploader onFilesSelected={handleFilesSelected} isProcessing={isBatchProcessing || isZipping} />
             {processedFiles.length > 0 && (
@@ -325,8 +329,9 @@ const App = () => {
                  </div>
             )}
           </>
+        )}
         
-        {processedFiles.length > 0 && (
+        {apiKey && processedFiles.length > 0 && (
           <ReportTable 
             data={processedFiles} 
             gameProviderMap={gameProviderMap}
