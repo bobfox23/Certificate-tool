@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { ExtractedGeminiInfo, GameInstanceData, FileDetail } from '../types.ts';
 import { GEMINI_MODEL_NAME, GENAI_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_PROMPT_FOR_CONTENTS } from '../constants.ts';
@@ -62,7 +63,7 @@ export async function extractInfoFromText(ocrText: string, apiKey: string): Prom
     try {
       const response: GenerateContentResponse = await ai.models.generateContent({
         model: GEMINI_MODEL_NAME,
-        contents: [{ role: "user", parts: [{text: ocrText}] }],
+        contents: ocrText,
         config: {
           systemInstruction: GENAI_SYSTEM_INSTRUCTION,
           responseMimeType: "application/json",

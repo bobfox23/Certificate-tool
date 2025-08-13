@@ -1,13 +1,12 @@
-
 import React, { useState, useCallback } from 'react';
 import { ProcessedFileData, GameInstanceData, FileDetail, GameProviderMap } from '../types.ts';
-import { ClipboardIcon } from './icons/ClipboardIcon.tsx';
-import { CheckIcon } from './icons/CheckIcon.tsx';
-import { LoadingSpinner } from './LoadingSpinner.tsx';
-import { ExclamationTriangleIcon } from './icons/ExclamationTriangleIcon.tsx';
-import { TrashIcon } from './icons/TrashIcon.tsx'; 
-import { DownloadIcon } from './icons/DownloadIcon.tsx'; 
-import { DocumentDuplicateIcon } from './icons/DocumentDuplicateIcon.tsx'; // For .COM process button
+import { ClipboardIcon } from './icons/ClipboardIcon.jsx';
+import { CheckIcon } from './icons/CheckIcon.jsx';
+import { LoadingSpinner } from './LoadingSpinner.jsx';
+import { ExclamationTriangleIcon } from './icons/ExclamationTriangleIcon.jsx';
+import { TrashIcon } from './icons/TrashIcon.jsx'; 
+import { DownloadIcon } from './icons/DownloadIcon.jsx'; 
+import { DocumentDuplicateIcon } from './icons/DocumentDuplicateIcon.jsx'; // For .COM process button
 
 interface ReportTableProps {
   data: ProcessedFileData[];

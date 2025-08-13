@@ -1,17 +1,15 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
 import saveAs from 'file-saver';
 
-import { FileUploader } from './components/FileUploader.tsx';
-import { ReportTable } from './components/ReportTable.tsx';
-import { ExcelDataProvider } from './components/ExcelDataProvider.tsx';
-import { ApiKeyManager } from './components/ApiKeyManager.tsx';
+import { FileUploader } from './components/FileUploader.jsx';
+import { ReportTable } from './components/ReportTable.jsx';
+import { ExcelDataProvider } from './components/ExcelDataProvider.jsx';
 import { ProcessedFileData, ExtractedGeminiInfo, GameProviderMap } from './types.ts';
 import { extractInfoFromText, extractInfoFromImage } from './services/geminiService.ts';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from './constants.ts';
-import { PlayIcon } from './components/icons/PlayIcon.tsx';
+import { PlayIcon } from './components/icons/PlayIcon.jsx';
 
 // Set up pdf.js worker
 const PDF_WORKER_SRC = `https://esm.sh/pdfjs-dist@4.5.136/build/pdf.worker.min.js`;
@@ -60,11 +58,8 @@ const App: React.FC = () => {
   const [originalFilesMap, setOriginalFilesMap] = useState<Map<string, File>>(new Map());
   const [isBatchProcessing, setIsBatchProcessing] = useState<boolean>(false);
   const [isZipping, setIsZipping] = useState<boolean>(false);
-  const [apiKey, setApiKey] = useState<string>('');
   const [gameProviderMap, setGameProviderMap] = useState<GameProviderMap>(new Map());
   const [providerDataStatus, setProviderDataStatus] = useState<string>('');
-
-  const isReadyForProcessing = !!apiKey;
 
   const extractTextFromPdf = async (file: File): Promise<string> => {
     const arrayBuffer = await file.arrayBuffer();
@@ -79,10 +74,6 @@ const App: React.FC = () => {
   };
 
   const handleFilesSelected = useCallback(async (files: FileList) => {
-    if (!isReadyForProcessing) {
-        alert("Please enter and save your Gemini API key before uploading files.");
-        return;
-    }
     const newInitialFilesData: ProcessedFileData[] = [];
     const newOriginalFilesMap = new Map(originalFilesMap);
 
@@ -135,10 +126,17 @@ const App: React.FC = () => {
     }
     setOriginalFilesMap(newOriginalFilesMap);
     setProcessedFiles(prev => [...prev, ...newInitialFilesData]);
-  }, [isReadyForProcessing, originalFilesMap]);
+  }, [originalFilesMap]);
 
   const handleStartProcessing = useCallback(async () => {
-    if (isBatchProcessing || isZipping || !isReadyForProcessing) return;
+    if (isBatchProcessing || isZipping) return;
+
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+        alert("Error: The Gemini API_KEY is not configured in the environment. Please set it up to proceed.");
+        setProcessedFiles(prev => prev.map(f => f.status === 'queued' ? { ...f, status: 'error', errorMessage: 'API Key not configured.' } : f));
+        return;
+    }
 
     const filesToProcess = processedFiles.filter(f => f.status === 'queued');
     if (filesToProcess.length === 0) {
@@ -193,7 +191,7 @@ const App: React.FC = () => {
         }
     }
     setIsBatchProcessing(false);
-  }, [processedFiles, originalFilesMap, isBatchProcessing, isZipping, apiKey, isReadyForProcessing]);
+  }, [processedFiles, originalFilesMap, isBatchProcessing, isZipping]);
 
 
   const handleClearAllData = useCallback(() => {
@@ -293,10 +291,6 @@ const App: React.FC = () => {
     }
   }, [processedFiles, originalFilesMap, gameProviderMap, isZipping, isBatchProcessing]);
 
-  const handleKeySaved = useCallback((key: string) => {
-    setApiKey(key);
-  }, []);
-
   const hasQueuedFiles = processedFiles.some(f => f.status === 'queued');
 
   return (
@@ -308,10 +302,7 @@ const App: React.FC = () => {
       </header>
 
       <main className="w-full max-w-5xl space-y-8">
-        <ApiKeyManager onKeySaved={handleKeySaved} isProcessing={isBatchProcessing || isZipping} />
-        
-        {isReadyForProcessing && (
-          <>
+        <>
             <ExcelDataProvider onDataParsed={handleProviderDataParsed} currentStatus={providerDataStatus} />
             <FileUploader onFilesSelected={handleFilesSelected} isProcessing={isBatchProcessing || isZipping} />
             {processedFiles.length > 0 && (
@@ -331,8 +322,8 @@ const App: React.FC = () => {
                  </div>
             )}
           </>
-        )}
-        {processedFiles.length > 0 && isReadyForProcessing && (
+        
+        {processedFiles.length > 0 && (
           <ReportTable 
             data={processedFiles} 
             gameProviderMap={gameProviderMap}
