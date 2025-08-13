@@ -1,16 +1,17 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
 import saveAs from 'file-saver';
 
-import { FileUploader } from './components/FileUploader';
-import { ReportTable } from './components/ReportTable';
-import { ExcelDataProvider } from './components/ExcelDataProvider';
-import { ApiKeyManager } from './components/ApiKeyManager';
-import { ProcessedFileData, ExtractedGeminiInfo, GameProviderMap } from './types';
-import { extractInfoFromText, extractInfoFromImage } from './services/geminiService';
-import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from './constants';
-import { PlayIcon } from './components/icons/PlayIcon';
+import { FileUploader } from './components/FileUploader.tsx';
+import { ReportTable } from './components/ReportTable.tsx';
+import { ExcelDataProvider } from './components/ExcelDataProvider.tsx';
+import { ApiKeyManager } from './components/ApiKeyManager.tsx';
+import { ProcessedFileData, ExtractedGeminiInfo, GameProviderMap } from './types.ts';
+import { extractInfoFromText, extractInfoFromImage } from './services/geminiService.ts';
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from './constants.ts';
+import { PlayIcon } from './components/icons/PlayIcon.tsx';
 
 // Set up pdf.js worker
 const PDF_WORKER_SRC = `https://esm.sh/pdfjs-dist@4.5.136/build/pdf.worker.min.js`;

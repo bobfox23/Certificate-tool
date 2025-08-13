@@ -1,6 +1,7 @@
+
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { ExtractedGeminiInfo, GameInstanceData, FileDetail } from '../types';
-import { GEMINI_MODEL_NAME, GENAI_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_PROMPT_FOR_CONTENTS } from '../constants';
+import { ExtractedGeminiInfo, GameInstanceData, FileDetail } from '../types.ts';
+import { GEMINI_MODEL_NAME, GENAI_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_PROMPT_FOR_CONTENTS } from '../constants.ts';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;

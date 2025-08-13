@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback } from 'react';
-import { GameProviderMap, ProviderInfo } from '../types';
-import { DatabaseIcon } from './icons/DatabaseIcon'; // Assuming a new icon or reuse existing
+import { GameProviderMap, ProviderInfo } from '../types.ts';
+import { DatabaseIcon } from './icons/DatabaseIcon.tsx'; // Assuming a new icon or reuse existing
 
 interface ExcelDataProviderProps {
   onDataParsed: (map: GameProviderMap, count: number) => void;

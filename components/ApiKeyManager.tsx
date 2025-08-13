@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
-import { KeyIcon } from './icons/KeyIcon';
-import { CheckIcon } from './icons/CheckIcon';
+import { KeyIcon } from './icons/KeyIcon.tsx';
+import { CheckIcon } from './icons/CheckIcon.tsx';
 
 interface ApiKeyManagerProps {
   onKeySaved: (key: string) => void;

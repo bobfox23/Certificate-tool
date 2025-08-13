@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback } from 'react';
-import { UploadIcon } from './icons/UploadIcon';
-import { MAX_FILE_SIZE_MB } from '../constants';
+import { UploadIcon } from './icons/UploadIcon.tsx';
+import { MAX_FILE_SIZE_MB } from '../constants.ts';
 
 
 interface FileUploaderProps {
