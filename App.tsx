@@ -1,16 +1,16 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
-import saveAs from 'file-saver'; 
+import saveAs from 'file-saver';
 
 import { FileUploader } from './components/FileUploader';
 import { ReportTable } from './components/ReportTable';
 import { ExcelDataProvider } from './components/ExcelDataProvider';
+import { ApiKeyManager } from './components/ApiKeyManager';
 import { ProcessedFileData, ExtractedGeminiInfo, GameProviderMap } from './types';
 import { extractInfoFromText, extractInfoFromImage } from './services/geminiService';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from './constants';
-import { PlayIcon } from './components/icons/PlayIcon'; // Assuming a PlayIcon for start button
+import { PlayIcon } from './components/icons/PlayIcon';
 
 // Set up pdf.js worker
 const PDF_WORKER_SRC = `https://esm.sh/pdfjs-dist@4.5.136/build/pdf.worker.min.js`;
@@ -33,7 +33,7 @@ const convertFileToBase64AndGetMime = (file: File): Promise<{ base64: string, mi
         reject(new Error("Invalid Data URL format"));
         return;
       }
-      const mimeType = parts[0].substring(5); 
+      const mimeType = parts[0].substring(5);
       const base64Data = parts[1].substring("base64,".length);
       resolve({ base64: base64Data, mimeType });
     };
@@ -57,18 +57,13 @@ const normalizeGameName = (name: string | null): string => {
 const App: React.FC = () => {
   const [processedFiles, setProcessedFiles] = useState<ProcessedFileData[]>([]);
   const [originalFilesMap, setOriginalFilesMap] = useState<Map<string, File>>(new Map());
-  const [isBatchProcessing, setIsBatchProcessing] = useState<boolean>(false); // For "Start Processing" button
+  const [isBatchProcessing, setIsBatchProcessing] = useState<boolean>(false);
   const [isZipping, setIsZipping] = useState<boolean>(false);
-  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string>('');
   const [gameProviderMap, setGameProviderMap] = useState<GameProviderMap>(new Map());
   const [providerDataStatus, setProviderDataStatus] = useState<string>('');
 
-
-  useEffect(() => {
-    if (!process.env.API_KEY) {
-      setApiKeyError("Gemini API Key (process.env.API_KEY) is not configured. Please ensure it is set up in your environment.");
-    }
-  }, []);
+  const isReadyForProcessing = !!apiKey;
 
   const extractTextFromPdf = async (file: File): Promise<string> => {
     const arrayBuffer = await file.arrayBuffer();
@@ -83,7 +78,10 @@ const App: React.FC = () => {
   };
 
   const handleFilesSelected = useCallback(async (files: FileList) => {
-    if (apiKeyError) return;
+    if (!isReadyForProcessing) {
+        alert("Please enter and save your Gemini API key before uploading files.");
+        return;
+    }
     const newInitialFilesData: ProcessedFileData[] = [];
     const newOriginalFilesMap = new Map(originalFilesMap);
 
@@ -124,7 +122,7 @@ const App: React.FC = () => {
         continue;
       }
 
-      newInitialFilesData.push({ // Files are now queued, not 'pending' or 'processing' immediately
+      newInitialFilesData.push({
         id: fileId,
         pdfFileName: file.name,
         reportNumber: null,
@@ -136,11 +134,10 @@ const App: React.FC = () => {
     }
     setOriginalFilesMap(newOriginalFilesMap);
     setProcessedFiles(prev => [...prev, ...newInitialFilesData]);
-    // Processing is no longer started here automatically
-  }, [apiKeyError, originalFilesMap]);
+  }, [isReadyForProcessing, originalFilesMap]);
 
   const handleStartProcessing = useCallback(async () => {
-    if (isBatchProcessing || isZipping) return;
+    if (isBatchProcessing || isZipping || !isReadyForProcessing) return;
 
     const filesToProcess = processedFiles.filter(f => f.status === 'queued');
     if (filesToProcess.length === 0) {
@@ -166,13 +163,13 @@ const App: React.FC = () => {
                 if (!textContent.trim()) {
                     throw new Error("No text content could be extracted from the PDF.");
                 }
-                extractedData = await extractInfoFromText(textContent);
+                extractedData = await extractInfoFromText(textContent, apiKey);
             } else if (isImage) {
                 const { base64, mimeType } = await convertFileToBase64AndGetMime(file);
                 if (!base64) {
                     throw new Error("Could not convert image to base64.");
                 }
-                extractedData = await extractInfoFromImage(base64, mimeType);
+                extractedData = await extractInfoFromImage(base64, mimeType, apiKey);
             } else {
                 throw new Error(`Unsupported file type for processing: ${file.type}`);
             }
@@ -195,7 +192,7 @@ const App: React.FC = () => {
         }
     }
     setIsBatchProcessing(false);
-  }, [processedFiles, originalFilesMap, isBatchProcessing, isZipping]);
+  }, [processedFiles, originalFilesMap, isBatchProcessing, isZipping, apiKey, isReadyForProcessing]);
 
 
   const handleClearAllData = useCallback(() => {
@@ -257,9 +254,6 @@ const App: React.FC = () => {
                     if (folder) {
                         folder.file(originalFile.name, originalFile, { binary: true });
                         processedFolders.add(folderName);
-                        if (folderName !== 'Uncategorized' || processedFile.extractedInstances.length === 1) {
-                           //
-                        }
                     }
                 }
             }
@@ -298,24 +292,24 @@ const App: React.FC = () => {
     }
   }, [processedFiles, originalFilesMap, gameProviderMap, isZipping, isBatchProcessing]);
 
+  const handleKeySaved = useCallback((key: string) => {
+    setApiKey(key);
+  }, []);
+
   const hasQueuedFiles = processedFiles.some(f => f.status === 'queued');
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-4 sm:p-6 lg:p-8 flex flex-col items-center">
-      <header className="w-full max-w-5xl mb-8 text-center">
-        <h1 className="text-4xl font-bold text-sky-400">Digital Beat certificate tool</h1>
+      <header className="w-full max-w-5xl mb-8 text-center flex flex-col items-center">
+        <img src="https://digibeat.com/wp-content/uploads/2022/06/logo-white-300x80.png" alt="Digital Beat Logo" className="h-12 mb-4" />
+        <h1 className="text-4xl font-bold text-sky-400">Certificate Tool</h1>
         <p className="mt-2 text-slate-400">Upload PDFs or Images, map games to providers, and export organized certificates.</p>
       </header>
 
-      {apiKeyError && (
-        <div className="w-full max-w-3xl p-4 mb-6 bg-red-800 border border-red-600 rounded-lg text-red-100">
-          <h2 className="font-semibold text-lg">API Key Error</h2>
-          <p>{apiKeyError}</p>
-        </div>
-      )}
-
       <main className="w-full max-w-5xl space-y-8">
-        {!apiKeyError && (
+        <ApiKeyManager onKeySaved={handleKeySaved} isProcessing={isBatchProcessing || isZipping} />
+        
+        {isReadyForProcessing && (
           <>
             <ExcelDataProvider onDataParsed={handleProviderDataParsed} currentStatus={providerDataStatus} />
             <FileUploader onFilesSelected={handleFilesSelected} isProcessing={isBatchProcessing || isZipping} />
@@ -337,14 +331,14 @@ const App: React.FC = () => {
             )}
           </>
         )}
-        {processedFiles.length > 0 && (
+        {processedFiles.length > 0 && isReadyForProcessing && (
           <ReportTable 
             data={processedFiles} 
             gameProviderMap={gameProviderMap}
             onClearAllData={handleClearAllData} 
             onExportZip={handleExportZip}
             isZipping={isZipping}
-            isBatchProcessing={isBatchProcessing} // Pass down batch processing state
+            isBatchProcessing={isBatchProcessing}
             canExport={processedFiles.some(f => f.status === 'completed') && gameProviderMap.size > 0 && !isBatchProcessing}
           />
         )}

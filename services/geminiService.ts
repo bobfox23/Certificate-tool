@@ -1,46 +1,149 @@
-import { ExtractedGeminiInfo } from '../types';
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { ExtractedGeminiInfo, GameInstanceData, FileDetail } from '../types';
+import { GEMINI_MODEL_NAME, GENAI_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_SYSTEM_INSTRUCTION, IMAGE_EXTRACTION_PROMPT_FOR_CONTENTS } from '../constants';
 
-async function handleApiResponse(response: Response): Promise<any> {
-  if (!response.ok) {
-    let errorMsg = `HTTP error! status: ${response.status}`;
-    try {
-      const errorBody = await response.json();
-      // Use the server's error message if available
-      errorMsg = errorBody.error || errorMsg;
-    } catch (e) {
-      // The response body was not JSON or was empty
-      errorMsg = `${errorMsg} - Could not parse error response.`;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
+
+function validateAndStructureData(parsedData: any, rawResponseText: string): ExtractedGeminiInfo {
+    // This validation logic is copied from the original api/extract.ts
+    if (typeof parsedData.reportNumber === 'undefined' ||
+        typeof parsedData.certificationDate === 'undefined' ||
+        typeof parsedData.supplierRegistrationNumber === 'undefined' ||
+        !Array.isArray(parsedData.gameInstances)) {
+        console.error("Parsed JSON structure error: missing key fields or gameInstances array. Raw:", rawResponseText.substring(0,500));
+        throw new Error('Parsed JSON does not match expected structure (missing reportNumber, certificationDate, supplierRegistrationNumber, or gameInstances array).');
     }
-    throw new Error(errorMsg);
+    
+    if (parsedData.gameInstances) {
+      for (const instance of parsedData.gameInstances as Array<Partial<GameInstanceData>>) {
+        if (typeof instance.gameName === 'undefined' ||
+            typeof instance.gameCode === 'undefined' ||
+            !Array.isArray(instance.files)) {
+          console.error("Parsed JSON game instance error: missing gameName, gameCode, or files array. Instance:", instance, "Raw:", rawResponseText.substring(0,500));
+          throw new Error('Parsed JSON for a game instance is invalid (missing gameName, gameCode, or files array).');
+        }
+        if (instance.files) {
+          for (const file of instance.files as Array<Partial<FileDetail>>) {
+            if (typeof file.name !== 'string' ) {
+               console.error("Parsed JSON file entry error: missing name. File:", file, "Raw:", rawResponseText.substring(0,500));
+               throw new Error('Parsed JSON for a file entry is invalid (missing name).');
+            }
+          }
+        }
+      }
+    }
+
+    const validatedData: ExtractedGeminiInfo = {
+      reportNumber: parsedData.reportNumber ?? null,
+      certificationDate: parsedData.certificationDate ?? null,
+      supplierRegistrationNumber: parsedData.supplierRegistrationNumber ?? null,
+      gameInstances: (parsedData.gameInstances || []).map((instance: Partial<GameInstanceData>) => ({
+          gameName: instance.gameName ?? null,
+          gameCode: instance.gameCode ?? null,
+          files: (instance.files || []).map((f: Partial<FileDetail>) => ({
+              name: f.name!,
+              md5: f.md5 === undefined ? null : f.md5, 
+              sha1: f.sha1 === undefined ? null : f.sha1 
+          }))
+      }))
+    };
+    return validatedData;
+}
+
+
+export async function extractInfoFromText(ocrText: string, apiKey: string): Promise<ExtractedGeminiInfo> {
+  if (!apiKey) throw new Error("API Key is not provided.");
+  const ai = new GoogleGenAI({ apiKey });
+  let lastError: any = null;
+  
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response: GenerateContentResponse = await ai.models.generateContent({
+        model: GEMINI_MODEL_NAME,
+        contents: [{ role: "user", parts: [{text: ocrText}] }],
+        config: {
+          systemInstruction: GENAI_SYSTEM_INSTRUCTION,
+          responseMimeType: "application/json",
+          thinkingConfig: { thinkingBudget: 0 } 
+        },
+      });
+
+      let jsonStr = response.text.trim();
+      const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
+      const match = jsonStr.match(fenceRegex);
+      if (match && match[2]) {
+        jsonStr = match[2].trim();
+      }
+
+      try {
+        const parsedData = JSON.parse(jsonStr);
+        return validateAndStructureData(parsedData, response.text);
+      } catch (e: any) {
+        throw new Error(`Failed to parse/validate JSON from AI (text). Raw: ${response.text.substring(0,1000)}. Err: ${e.message}`);
+      }
+
+    } catch (error: any) {
+      lastError = error;
+      const errorMessage = String(error.message || '');
+      if (errorMessage.includes("API key not valid")) {
+          throw new Error("The provided API Key is invalid or has been rejected by Google.");
+      }
+      if (errorMessage.includes("500") && attempt < MAX_RETRIES) { // More generic retry for server errors
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempt));
+        continue; 
+      }
+      // Don't rethrow on final attempt, it will be thrown after loop
+    }
   }
-  return response.json();
+  throw lastError || new Error(`Failed to extract info from text after ${MAX_RETRIES} attempts.`);
 }
 
-export async function extractInfoFromText(ocrText: string): Promise<ExtractedGeminiInfo> {
-  const response = await fetch('/api/extract', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      type: 'text',
-      data: ocrText,
-    }),
-  });
-  return handleApiResponse(response);
-}
+export async function extractInfoFromImage(imageBase64: string, mimeType: string, apiKey: string): Promise<ExtractedGeminiInfo> {
+  if (!apiKey) throw new Error("API Key is not provided.");
+  const ai = new GoogleGenAI({ apiKey });
+  let lastError: any = null;
+  
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const imagePart = { inlineData: { mimeType, data: imageBase64 } };
+      const textPart = { text: IMAGE_EXTRACTION_PROMPT_FOR_CONTENTS };
 
-export async function extractInfoFromImage(imageBase64: string, mimeType: string): Promise<ExtractedGeminiInfo> {
-  const response = await fetch('/api/extract', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      type: 'image',
-      data: imageBase64,
-      mimeType: mimeType,
-    }),
-  });
-  return handleApiResponse(response);
+      const response: GenerateContentResponse = await ai.models.generateContent({
+        model: GEMINI_MODEL_NAME,
+        contents: { parts: [imagePart, textPart] },
+        config: {
+          systemInstruction: IMAGE_EXTRACTION_SYSTEM_INSTRUCTION,
+          responseMimeType: "application/json",
+          thinkingConfig: { thinkingBudget: 0 }
+        },
+      });
+
+      let jsonStr = response.text.trim();
+      const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
+      const match = jsonStr.match(fenceRegex);
+      if (match && match[2]) {
+        jsonStr = match[2].trim();
+      }
+      
+      try {
+        const parsedData = JSON.parse(jsonStr);
+        return validateAndStructureData(parsedData, response.text);
+      } catch (e: any) {
+        throw new Error(`Failed to parse/validate JSON from AI (image). Raw: ${response.text.substring(0,1000)}. Err: ${e.message}`);
+      }
+
+    } catch (error: any) {
+      lastError = error;
+      const errorMessage = String(error.message || '');
+       if (errorMessage.includes("API key not valid")) {
+          throw new Error("The provided API Key is invalid or has been rejected by Google.");
+      }
+      if (errorMessage.includes("500") && attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempt));
+        continue;
+      }
+    }
+  }
+  throw lastError || new Error(`Failed to extract info from image after ${MAX_RETRIES} attempts.`);
 }
